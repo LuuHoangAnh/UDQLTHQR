@@ -171,7 +171,7 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- Chức năng Tạo tài khoản -->
+        <!-- Chức năng thông tin khách hàng -->
         <androidx.cardview.widget.CardView
             android:id="@+id/cardCustomer"
             android:layout_width="0dp"
@@ -204,7 +204,7 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- Chức năng Tạo tài khoản -->
+        <!-- Chức năng đăng xuất -->
         <androidx.cardview.widget.CardView
             android:id="@+id/cardExit"
             android:layout_width="0dp"

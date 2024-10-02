@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/sellLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Tiêu đề -->
+        <TextView
+            android:id="@+id/tvSellTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Nhập hàng"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="24dp" />
+
+        <!-- Nút Quét QR Code -->
+        <Button
+            android:id="@+id/btnScanQR"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Quét QR Code"
+            android:backgroundTint="#9C27B0"
+            android:textColor="@android:color/white"
+            android:layout_gravity="center_horizontal"
+            android:padding="12dp"
+            android:layout_marginBottom="24dp" />
+
+        <!-- EditText Mã Sản Phẩm -->
+        <EditText
+            android:id="@+id/etProductCode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Mã Sản Phẩm"
+            android:inputType="text"
+            android:enabled="false"
+            android:padding="12dp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- EditText Tên Sản Phẩm -->
+        <EditText
+            android:id="@+id/etProductName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Tên Sản Phẩm"
+            android:inputType="text"
+            android:enabled="false"
+            android:padding="12dp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- EditText Giá Tiền -->
+        <EditText
+            android:id="@+id/etPrice"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Giá Tiền"
+            android:inputType="numberDecimal"
+            android:enabled="false"
+            android:padding="12dp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- EditText Số Lượng -->
+        <EditText
+            android:id="@+id/etQuantity"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Số Lượng"
+            android:inputType="number"
+            android:padding="12dp"
+            android:layout_marginBottom="24dp" />
+
+        <!-- Nút hoàn thành giao dịch -->
+        <Button
+            android:id="@+id/btnDone"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Hoàn thành giao dịch"
+            android:backgroundTint="#9C27B0"
+            android:textColor="@android:color/white"
+            android:padding="12dp" />
+
+    </LinearLayout>
+</ScrollView>
