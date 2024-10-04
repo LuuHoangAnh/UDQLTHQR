@@ -22,16 +22,17 @@
             android:layout_marginBottom="24dp" />
 
         <!-- Nút Quét QR Code -->
-        <Button
+        <ImageButton
             android:id="@+id/btnScanQR"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Quét QR Code"
-            android:backgroundTint="#9C27B0"
-            android:textColor="@android:color/white"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:src="@drawable/ic_camera"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Quét QR Code"
             android:layout_gravity="center_horizontal"
-            android:padding="12dp"
+            android:padding="16dp"
             android:layout_marginBottom="24dp" />
+
 
         <!-- EditText Mã Sản Phẩm -->
         <EditText
