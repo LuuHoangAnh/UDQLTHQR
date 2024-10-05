@@ -60,6 +60,10 @@ public class LoginActivity extends AppCompatActivity {
                                 if (getPassword.equals(pass)) {
                                     Toast.makeText(LoginActivity.this, "Đăng nhập thành công!", Toast.LENGTH_SHORT).show();
                                     Intent i = new Intent(LoginActivity.this, MainActivity.class);
+                                    String getName = snapshot.child(user).child("fullname").getValue().toString();
+                                    String getRole = snapshot.child(user).child("role").getValue().toString();
+                                    i.putExtra("nameofuser", getName);
+                                    i.putExtra("roleofuser", getRole);
                                     startActivity(i);
                                 }
                                 else
