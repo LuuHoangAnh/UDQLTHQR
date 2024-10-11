@@ -51,5 +51,15 @@
             android:textColor="@android:color/white"
             android:padding="12dp" />
 
+        <!-- Nút Xác Nhận Hoàn Thành Giao Dịch -->
+        <Button
+            android:id="@+id/btnBack"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Quay lại"
+            android:backgroundTint="#9C27B0"
+            android:textColor="@android:color/white"
+            android:padding="12dp" />
+
     </LinearLayout>
 </ScrollView>

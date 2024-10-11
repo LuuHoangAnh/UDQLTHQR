@@ -30,6 +30,15 @@
             android:exported="false" />
         <activity
             android:name=".LoginActivity"
+            android:exported="false" />
+        <activity
+            android:name=".SellActivity"
+            android:exported="false" />
+        <activity
+            android:name=".BuyActivity"
+            android:exported="false" />
+        <activity
+            android:name=".GetCustomerInfoActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
