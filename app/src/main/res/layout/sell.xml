@@ -33,7 +33,7 @@
             android:padding="16dp"
             android:layout_marginBottom="24dp" />
 
-        <!-- EditText Mã Sản Phẩm -->
+        <!--&lt;!&ndash; EditText Mã Sản Phẩm &ndash;&gt;
         <EditText
             android:id="@+id/etProductCode"
             android:layout_width="match_parent"
@@ -44,7 +44,7 @@
             android:padding="12dp"
             android:layout_marginBottom="16dp" />
 
-        <!-- EditText Tên Sản Phẩm -->
+        &lt;!&ndash; EditText Tên Sản Phẩm &ndash;&gt;
         <EditText
             android:id="@+id/etProductName"
             android:layout_width="match_parent"
@@ -55,7 +55,7 @@
             android:padding="12dp"
             android:layout_marginBottom="16dp" />
 
-        <!-- EditText Giá Tiền -->
+        &lt;!&ndash; EditText Giá Tiền &ndash;&gt;
         <EditText
             android:id="@+id/etPrice"
             android:layout_width="match_parent"
@@ -66,7 +66,7 @@
             android:padding="12dp"
             android:layout_marginBottom="16dp" />
 
-        <!-- EditText Số Lượng -->
+        &lt;!&ndash; EditText Số Lượng &ndash;&gt;
         <EditText
             android:id="@+id/etQuantity"
             android:layout_width="match_parent"
@@ -74,7 +74,11 @@
             android:hint="Số Lượng"
             android:inputType="number"
             android:padding="12dp"
-            android:layout_marginBottom="24dp" />
+            android:layout_marginBottom="24dp" />-->
+        <ListView
+            android:id="@+id/lvProducts"
+            android:layout_width="match_parent"
+            android:layout_height="350dp" />
 
         <!-- Nút lấy thông tin khách hàng -->
         <Button
