@@ -63,7 +63,6 @@
             android:layout_height="wrap_content"
             android:hint="Giá Tiền"
             android:inputType="numberDecimal"
-            android:enabled="false"
             android:padding="12dp"
             android:layout_marginBottom="16dp" />
 
@@ -79,13 +78,38 @@
 
         <!-- Nút hoàn thành giao dịch -->
         <Button
-            android:id="@+id/btnDone"
+            android:id="@+id/btnAdd"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:text="Thêm"
+            android:backgroundTint="#9C27B0"
+            android:textColor="@android:color/white"
+            android:padding="12dp" />
+        <!-- Nút quay trở lại -->
+        <Button
+            android:id="@+id/btnBack"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Quay lại"
+            android:backgroundTint="#9C27B0"
+            android:textColor="@android:color/white"
+            android:padding="12dp" />
+        <!-- List sản phẩm-->
+        <ListView
+            android:id="@+id/lvProducts"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:divider="@android:color/darker_gray"
+            android:dividerHeight="1dp" />
+        <!-- Nút hoàn thành giao dịch -->
+        <Button
+            android:id="@+id/btnDone"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
             android:text="Hoàn thành giao dịch"
             android:backgroundTint="#9C27B0"
             android:textColor="@android:color/white"
             android:padding="12dp" />
-
     </LinearLayout>
 </ScrollView>
