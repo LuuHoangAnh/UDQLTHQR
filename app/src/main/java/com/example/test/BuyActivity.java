@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Random;
 
 public class BuyActivity extends AppCompatActivity {
+    DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReferenceFromUrl("https://udqlthqr-default-rtdb.firebaseio.com/");
     DatabaseReference productsRepository = FirebaseDatabase.getInstance().getReferenceFromUrl("https://udqlthqr-default-rtdb.firebaseio.com/products");
     DatabaseReference receiptRepository = FirebaseDatabase.getInstance().getReferenceFromUrl("https://udqlthqr-default-rtdb.firebaseio.com/receipt");
 
@@ -102,19 +103,6 @@ public class BuyActivity extends AppCompatActivity {
                     return;
                 }
 
-                /*for (String productDetails : productList) {
-                    String[] parts = productDetails.split(", ");
-                    String productCode = parts[0].split(": ")[1];
-                    String productName = parts[1].split(": ")[1];
-                    String priceText = parts[2].split(": ")[1];
-                    int quantity = Integer.parseInt(parts[3].split(": ")[1]);
-
-                    saveToFirebase(productCode, productName, priceText, quantity);
-                }
-
-                // Sau khi lưu xong, thông báo thành công
-                Toast.makeText(BuyActivity.this, "Đã thêm tất cả sản phẩm vào cơ sở dữ liệu.", Toast.LENGTH_SHORT).show();*/
-
                 DatabaseReference receiptRef = receiptRepository.child(receiptCode);
 
                 for (String productDetails : productList) {
@@ -124,13 +112,49 @@ public class BuyActivity extends AppCompatActivity {
                     String priceText = parts[2].split(": ")[1];
                     int quantity = Integer.parseInt(parts[3].split(": ")[1]);
 
-                    // Tạo một nhánh nhỏ cho từng sản phẩm trong hóa đơn
+                    // Lưu vào receiptRepository
                     DatabaseReference productRef = receiptRef.child(productCode);
                     productRef.child("Name").setValue(productName);
                     productRef.child("Price").setValue(priceText);
                     productRef.child("Quantity").setValue(quantity);
-                }
 
+                    // Cập nhật số lượng trong productsRepository
+                    DatabaseReference productDbRef = productsRepository.child(productCode);
+                    productDbRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(@NonNull DataSnapshot snapshot) {
+                            /*if (snapshot.exists()) {
+                                Integer currentQuantity = snapshot.child("Quantity").getValue(Integer.class);
+                                if (currentQuantity != null) {
+                                    int updatedQuantity = currentQuantity + quantity;
+                                    productDbRef.child("Quantity").setValue(updatedQuantity);
+                                }
+                            } else {
+                                Toast.makeText(BuyActivity.this, "Sản phẩm không tồn tại trong kho: " + productName, Toast.LENGTH_SHORT).show();
+                            }*/
+                            if (snapshot.exists()) {
+                                // Sản phẩm đã tồn tại, cập nhật số lượng
+                                Integer currentQuantity = snapshot.child("Quantity").getValue(Integer.class);
+                                if (currentQuantity != null) {
+                                    int updatedQuantity = currentQuantity + quantity;
+                                    productDbRef.child("Quantity").setValue(updatedQuantity);
+                                }
+                            } else {
+                                // Sản phẩm chưa tồn tại, thêm mới
+                                productDbRef.child("Name").setValue(productName);
+                                productDbRef.child("ProductCode").setValue(productCode);
+                                productDbRef.child("Price").setValue(priceText);
+                                productDbRef.child("Quantity").setValue(quantity);
+                                Toast.makeText(BuyActivity.this, "Đã thêm sản phẩm mới: " + productName, Toast.LENGTH_SHORT).show();
+                            }
+                        }
+
+                        @Override
+                        public void onCancelled(@NonNull DatabaseError error) {
+                            Toast.makeText(BuyActivity.this, "Lỗi khi cập nhật sản phẩm: " + productName, Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
                 // Hiển thị thông báo thành công
                 Toast.makeText(BuyActivity.this, "Hóa đơn đã được thêm vào cơ sở dữ liệu với mã: " + receiptCode, Toast.LENGTH_SHORT).show();
 

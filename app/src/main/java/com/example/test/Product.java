@@ -17,4 +17,9 @@ public class Product {
         Price = price;
         Quantity = quantity;
     }
+
+    @Override
+    public String toString() {
+        return "Mã: " + ProductCode + ", Tên: " + ProductName + ", Giá: " + Price + ", SL: " + Quantity;
+    }
 }

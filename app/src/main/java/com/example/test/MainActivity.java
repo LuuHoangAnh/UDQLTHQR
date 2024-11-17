@@ -1,6 +1,7 @@
 package com.example.test;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -30,8 +31,12 @@ public class MainActivity extends AppCompatActivity {
         cardCustomer = (CardView) findViewById(R.id.cardCustomer);
         cardExit = (CardView) findViewById(R.id.cardExit);
 
-        String name = getIntent().getExtras().getString("nameofuser");
-        String role = getIntent().getExtras().getString("roleofuser");
+        /*String name = getIntent().getExtras().getString("nameofuser");
+        String role = getIntent().getExtras().getString("roleofuser");*/
+
+        SharedPreferences sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE);
+        String name = sharedPreferences.getString("nameofuser", "Tên người dùng");  // Sử dụng giá trị mặc định nếu không tìm thấy
+        String role = sharedPreferences.getString("roleofuser", "Chức vụ");  // Sử dụng giá trị mặc định nếu không tìm thấy
 
         tvUserInfo.setText(name);
         tvUserRole.setText("Chức vụ: "+role);
@@ -51,7 +56,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
                 if (role.equalsIgnoreCase("admin") || role.equalsIgnoreCase("manager"))
                 {
-                    Intent i = new Intent(MainActivity.this, SellActivity.class);
+                    Intent i = new Intent(MainActivity.this, BuyActivity.class);
                     startActivity(i);
                 }
                 else
@@ -74,12 +79,31 @@ public class MainActivity extends AppCompatActivity {
         });
 
         //chức năng thống kê báo cáo
+        cardReports.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent i = new Intent(MainActivity.this, RepositoryActivity.class);
+                startActivity(i);
+            }
+        });
         //chức năng thông tin khách hàng
+        cardCustomer.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent i = new Intent(MainActivity.this, CustomerActivity.class);
+                startActivity(i);
+            }
+        });
 
         //chức năng logout
         cardExit.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                SharedPreferences sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE);
+                SharedPreferences.Editor editor = sharedPreferences.edit();
+                editor.clear();  // Xóa dữ liệu người dùng
+                editor.apply();
+
                 Intent i = new Intent(MainActivity.this, LoginActivity.class);
                 startActivity(i);
                 Toast.makeText(MainActivity.this, "Đăng xuất thành công!", Toast.LENGTH_SHORT).show();

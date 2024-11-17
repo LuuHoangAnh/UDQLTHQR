@@ -78,7 +78,7 @@
         <ListView
             android:id="@+id/lvProducts"
             android:layout_width="match_parent"
-            android:layout_height="350dp" />
+            android:layout_height="wrap_content" />
 
         <!-- Nút lấy thông tin khách hàng -->
         <Button
@@ -95,6 +95,14 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Hoàn thành giao dịch"
+            android:backgroundTint="#9C27B0"
+            android:textColor="@android:color/white"
+            android:padding="12dp" />
+        <Button
+            android:id="@+id/btnBack"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Quay lại"
             android:backgroundTint="#9C27B0"
             android:textColor="@android:color/white"
             android:padding="12dp" />

@@ -1,6 +1,7 @@
 package com.example.test;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -62,6 +63,13 @@ public class LoginActivity extends AppCompatActivity {
                                     Intent i = new Intent(LoginActivity.this, MainActivity.class);
                                     String getName = snapshot.child(user).child("fullname").getValue().toString();
                                     String getRole = snapshot.child(user).child("role").getValue().toString();
+
+                                    SharedPreferences sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE);
+                                    SharedPreferences.Editor editor = sharedPreferences.edit();
+                                    editor.putString("nameofuser", getName);
+                                    editor.putString("roleofuser", getRole);
+                                    editor.apply();  // Lưu dữ liệu
+
                                     i.putExtra("nameofuser", getName);
                                     i.putExtra("roleofuser", getRole);
                                     startActivity(i);

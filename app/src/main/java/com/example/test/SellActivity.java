@@ -1,12 +1,15 @@
 package com.example.test;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.Toast;
 
@@ -36,13 +39,17 @@ public class SellActivity extends AppCompatActivity {
 
     ImageButton btnScanQR;
     EditText etProductCode, etProductName, etPrice, etQuantity;
-    Button btnInfoCustomer, btnDone;
+    Button btnInfoCustomer, btnDone, btnBack;
 
     ListView lvProducts;
 
     List<String> productList = new ArrayList<>();
     ArrayAdapter<String> adapter;
 
+    // Danh sách lưu trữ tạm thời sản phẩm quét
+    List<Product> tempProductList = new ArrayList<>();
+
+    private int defaultListViewHeight;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,22 +59,90 @@ public class SellActivity extends AppCompatActivity {
         btnScanQR = (ImageButton) findViewById(R.id.btnScanQR);
         btnInfoCustomer = (Button) findViewById(R.id.btnInfoCustomer);
         btnDone = (Button) findViewById(R.id.btnDone);
+        btnBack = (Button) findViewById(R.id.btnBack);
         lvProducts = (ListView) findViewById(R.id.lvProducts);
 
         adapter = new ArrayAdapter<>(this, R.layout.list_item, R.id.tvProductInfo, productList);
         lvProducts.setAdapter(adapter);
+
+        lvProducts.post(() -> defaultListViewHeight = lvProducts.getHeight());  //lưu chiều cao mặc định
 
         // Tải dữ liệu từ Firebase
         loadProductsFromFirebase();
 
         btnScanQR.setOnClickListener(new View.OnClickListener() {
             @Override
+            public void onClick(View view) { barcodeLauncher.launch(new ScanOptions());}
+        });
+
+        btnBack.setOnClickListener(new View.OnClickListener() {
+            @Override
             public void onClick(View view) {
-                barcodeLauncher.launch(new ScanOptions());
+                Intent i = new Intent(SellActivity.this, MainActivity.class);
+                startActivity(i);
+                finish();
             }
         });
 
+        btnInfoCustomer.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent i = new Intent(SellActivity.this, GetCustomerInfoActivity.class);
+                startActivity(i);
+            }
+        });
 
+        btnDone.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (tempProductList.isEmpty()) {
+                    Toast.makeText(SellActivity.this, "Không có sản phẩm nào trong danh sách!", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                for (Product product : tempProductList) {
+                    String productCode = product.ProductCode;
+                    int quantityToSubtract = product.Quantity;
+
+                    // Trừ số lượng từ kho
+                    productsRepository.child(productCode).child("Quantity").addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(@NonNull DataSnapshot snapshot) {
+                            Integer stockQuantity = snapshot.getValue(Integer.class);
+                            if (stockQuantity != null && stockQuantity >= quantityToSubtract) {
+                                productsRepository.child(productCode).child("Quantity").setValue(stockQuantity - quantityToSubtract)
+                                        .addOnSuccessListener(aVoid -> {
+                                            // Lưu sản phẩm vào hóa đơn
+                                            billRepository.child(billCode).child(productCode).setValue(product)
+                                                    .addOnSuccessListener(aVoid1 -> {
+                                                        Toast.makeText(SellActivity.this, "Lưu hóa đơn thành công!", Toast.LENGTH_SHORT).show();
+                                                    })
+                                                    .addOnFailureListener(e -> {
+                                                        Toast.makeText(SellActivity.this, "Lỗi khi lưu hóa đơn!", Toast.LENGTH_SHORT).show();
+                                                    });
+                                        })
+                                        .addOnFailureListener(e -> {
+                                            Toast.makeText(SellActivity.this, "Lỗi khi trừ số lượng kho!", Toast.LENGTH_SHORT).show();
+                                        });
+                            } else {
+                                Toast.makeText(SellActivity.this, "Số lượng trong kho không đủ!", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+
+                        @Override
+                        public void onCancelled(@NonNull DatabaseError error) {
+                            Toast.makeText(SellActivity.this, "Lỗi khi kiểm tra kho dữ liệu!", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
+
+                // Xóa danh sách tạm thời và cập nhật giao diện
+                tempProductList.clear();
+                productList.clear();
+                adapter.notifyDataSetChanged();
+                setListViewHeightBasedOnItems(lvProducts);
+                }
+        });
     }
 
     Random random = new Random();
@@ -99,6 +174,7 @@ public class SellActivity extends AppCompatActivity {
                     }
                 }
                 adapter.notifyDataSetChanged(); // Cập nhật ListView
+                setListViewHeightBasedOnItems(lvProducts);
             }
 
             @Override
@@ -108,107 +184,53 @@ public class SellActivity extends AppCompatActivity {
         });
     }
 
-    /**
-     * Đăng ký launcher và xử lý kết quả từ việc quét QR code
-     */
     private final ActivityResultLauncher<ScanOptions> barcodeLauncher = registerForActivityResult(new ScanContract(),
             result -> {
-                if (result.getContents() == null) {  // Nếu quét bị hủy
+                if (result.getContents() == null) {
                     Toast.makeText(SellActivity.this, "Cancelled", Toast.LENGTH_LONG).show();
                 } else {
                     try {
                         JSONObject jsonObject = new JSONObject(result.getContents());
-                        String ProductCode = jsonObject.getString("Code");
-                        String ProductName = jsonObject.getString("Name");
-                        String Price = jsonObject.getString("Price");
-                        int Quantity = Integer.parseInt(jsonObject.getString("Quantity"));
+                        String productCode = jsonObject.getString("Code");
+                        String productName = jsonObject.getString("Name");
+                        String price = jsonObject.getString("Price");
+                        int quantity = Integer.parseInt(jsonObject.getString("Quantity"));
 
-                        billRepository.child(billCode).child(ProductCode).addListenerForSingleValueEvent(new ValueEventListener() {
+                        // Kiểm tra số lượng trong kho từ Firebase
+                        productsRepository.child(productCode).child("Quantity").addListenerForSingleValueEvent(new ValueEventListener() {
                             @Override
                             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                                if (snapshot.exists()) {
-                                    // Kiểm tra xem sản phẩm đã tồn tại trong bill chưa
-                                    Integer currentBillQuantity = snapshot.child("Quantity").getValue(Integer.class);
-                                    if (currentBillQuantity != null) {
-                                        productsRepository.child(ProductCode).child("Quantity").addListenerForSingleValueEvent(new ValueEventListener() {
-                                            @Override
-                                            public void onDataChange(@NonNull DataSnapshot productSnapshot) {
-                                                Integer stockQuantity = productSnapshot.getValue(Integer.class);
+                                Integer stockQuantity = snapshot.getValue(Integer.class);
 
-                                                if (stockQuantity != null && stockQuantity >= Quantity) {
-                                                    //Cập nhật số lượng nếu đã tồn tại
-                                                    billRepository.child(billCode).child(ProductCode).child("Quantity").setValue(currentBillQuantity + Quantity)
-                                                            .addOnSuccessListener(aVoid -> {
-                                                                Toast.makeText(SellActivity.this, "Cập nhật số lượng sản phẩm thành công!", Toast.LENGTH_SHORT).show();
-
-                                                                //Cập nhật lại kho
-                                                                productsRepository.child(ProductCode).child("Quantity").setValue(stockQuantity - Quantity)
-                                                                        .addOnSuccessListener(aVoid1 -> {
-                                                                            Toast.makeText(SellActivity.this, "Cập nhật kho thành công!", Toast.LENGTH_SHORT).show();
-                                                                        })
-                                                                        .addOnFailureListener(e -> {
-                                                                            Toast.makeText(SellActivity.this, "Cập nhật kho thất bại!", Toast.LENGTH_SHORT).show();
-                                                                        });
-                                                            })
-                                                            .addOnFailureListener(e -> {
-                                                                Toast.makeText(SellActivity.this, "Cập nhật số lượng sản phẩm thất bại!", Toast.LENGTH_SHORT).show();
-                                                            });
-                                                } else {
-                                                    Toast.makeText(SellActivity.this, "Số lượng sản phẩm trong kho không đủ!", Toast.LENGTH_SHORT).show();
-                                                }
-                                            }
-
-                                            @Override
-                                            public void onCancelled(@NonNull DatabaseError error) {
-                                                Toast.makeText(SellActivity.this, "Lỗi khi kiểm tra kho dữ liệu!", Toast.LENGTH_SHORT).show();
-                                            }
-                                        });
-                                    } else {
-                                        Toast.makeText(SellActivity.this, "Lỗi khi lấy số lượng hiện tại.", Toast.LENGTH_SHORT).show();
+                                if (stockQuantity != null && stockQuantity >= quantity) {
+                                    // Kiểm tra sản phẩm đã tồn tại trong danh sách tạm thời chưa
+                                    boolean productExists = false;
+                                    for (Product product : tempProductList) {
+                                        if (product.ProductCode.equals(productCode)) {
+                                            // Nếu tồn tại, tăng số lượng
+                                            product.Quantity += quantity;
+                                            productExists = true;
+                                            break;
+                                        }
                                     }
+
+                                    if (!productExists) {
+                                        // Nếu chưa tồn tại, thêm mới
+                                        tempProductList.add(new Product(productCode, productName, price, quantity));
+                                    }
+
+                                    // Cập nhật ListView
+                                    updateProductListView();
+
+                                    Toast.makeText(SellActivity.this, "Đã thêm hoặc cập nhật sản phẩm trong danh sách.", Toast.LENGTH_SHORT).show();
                                 } else {
-                                    //Nếu sản phẩm chưa tồn tại, kiểm tra kho và thêm
-                                    productsRepository.child(ProductCode).child("Quantity").addListenerForSingleValueEvent(new ValueEventListener() {
-                                        @Override
-                                        public void onDataChange(@NonNull DataSnapshot productSnapshot) {
-                                            Integer stockQuantity = productSnapshot.getValue(Integer.class);
-
-                                            if (stockQuantity != null && stockQuantity >= Quantity) {
-                                                Product product = new Product(ProductCode, ProductName, Price, Quantity);
-
-                                                //Thêm sản phẩm vào bill
-                                                billRepository.child(billCode).child(ProductCode).setValue(product)
-                                                        .addOnSuccessListener(aVoid -> {
-                                                            Toast.makeText(SellActivity.this, "Thêm mặt hàng thành công!", Toast.LENGTH_SHORT).show();
-
-                                                            //Cập nhật lại kho
-                                                            productsRepository.child(ProductCode).child("Quantity").setValue(stockQuantity - Quantity)
-                                                                    .addOnSuccessListener(aVoid1 -> {
-                                                                        Toast.makeText(SellActivity.this, "Cập nhật kho thành công!", Toast.LENGTH_SHORT).show();
-                                                                    })
-                                                                    .addOnFailureListener(e -> {
-                                                                        Toast.makeText(SellActivity.this, "Cập nhật kho thất bại!", Toast.LENGTH_SHORT).show();
-                                                                    });
-                                                        })
-                                                        .addOnFailureListener(e -> {
-                                                            Toast.makeText(SellActivity.this, "Thêm mặt hàng thất bại!", Toast.LENGTH_SHORT).show();
-                                                        });
-                                            } else {
-                                                Toast.makeText(SellActivity.this, "Số lượng trong kho không đủ!", Toast.LENGTH_SHORT).show();
-                                            }
-                                        }
-
-                                        @Override
-                                        public void onCancelled(@NonNull DatabaseError error) {
-                                            Toast.makeText(SellActivity.this, "Lỗi khi kiểm tra kho dữ liệu!", Toast.LENGTH_SHORT).show();
-                                        }
-                                    });
+                                    Toast.makeText(SellActivity.this, "Số lượng sản phẩm trong kho không đủ!", Toast.LENGTH_SHORT).show();
                                 }
                             }
 
                             @Override
                             public void onCancelled(@NonNull DatabaseError error) {
-                                Toast.makeText(SellActivity.this, "Lỗi khi truy cập dữ liệu hóa đơn.", Toast.LENGTH_SHORT).show();
+                                Toast.makeText(SellActivity.this, "Lỗi khi kiểm tra kho dữ liệu!", Toast.LENGTH_SHORT).show();
                             }
                         });
                     } catch (JSONException e) {
@@ -217,4 +239,38 @@ public class SellActivity extends AppCompatActivity {
                     }
                 }
             });
+
+    private void updateProductListView() {
+        productList.clear(); // Xóa danh sách hiển thị cũ
+        for (Product product : tempProductList) {
+            String productInfo = "Mã sản phẩm: " + product.ProductCode +
+                    ", Tên: " + product.ProductName +
+                    ", Giá: " + product.Price +
+                    ", Số lượng: " + product.Quantity;
+            productList.add(productInfo);
+        }
+        adapter.notifyDataSetChanged(); // Cập nhật lại ListView
+        setListViewHeightBasedOnItems(lvProducts); // Cập nhật chiều cao ListView
+    }
+
+
+    private void setListViewHeightBasedOnItems(ListView listView) {
+        ListAdapter listAdapter = listView.getAdapter();
+        if (listAdapter == null) return;
+
+        int totalHeight = 0;
+        for (int i = 0; i < listAdapter.getCount(); i++) {
+            View listItem = listAdapter.getView(i, null, listView);
+            listItem.measure(
+                    View.MeasureSpec.makeMeasureSpec(listView.getWidth(), View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.UNSPECIFIED
+            );
+            totalHeight += listItem.getMeasuredHeight();
+        }
+
+        ViewGroup.LayoutParams params = listView.getLayoutParams();
+        params.height = totalHeight + (listView.getDividerHeight() * (listAdapter.getCount() - 1));
+        listView.setLayoutParams(params);
+        listView.requestLayout();
+    }
 }
