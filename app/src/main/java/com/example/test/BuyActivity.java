@@ -2,8 +2,11 @@ package com.example.test;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.ContextMenu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
@@ -66,6 +69,8 @@ public class BuyActivity extends AppCompatActivity {
 
         lvProducts.post(() -> defaultListViewHeight = lvProducts.getHeight());  //lưu chiều cao mặc định
 
+        registerForContextMenu(lvProducts);
+
         btnScanQR.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -123,15 +128,6 @@ public class BuyActivity extends AppCompatActivity {
                     productDbRef.addListenerForSingleValueEvent(new ValueEventListener() {
                         @Override
                         public void onDataChange(@NonNull DataSnapshot snapshot) {
-                            /*if (snapshot.exists()) {
-                                Integer currentQuantity = snapshot.child("Quantity").getValue(Integer.class);
-                                if (currentQuantity != null) {
-                                    int updatedQuantity = currentQuantity + quantity;
-                                    productDbRef.child("Quantity").setValue(updatedQuantity);
-                                }
-                            } else {
-                                Toast.makeText(BuyActivity.this, "Sản phẩm không tồn tại trong kho: " + productName, Toast.LENGTH_SHORT).show();
-                            }*/
                             if (snapshot.exists()) {
                                 // Sản phẩm đã tồn tại, cập nhật số lượng
                                 Integer currentQuantity = snapshot.child("Quantity").getValue(Integer.class);
@@ -170,6 +166,29 @@ public class BuyActivity extends AppCompatActivity {
             }
         });
     }
+
+    @Override
+    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
+        getMenuInflater().inflate(R.menu.menucontext, menu);
+        super.onCreateContextMenu(menu, v, menuInfo);
+    }
+
+    @Override
+    public boolean onContextItemSelected(@NonNull MenuItem item) {
+        AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo) item.getMenuInfo();
+        int pos = info.position; //lay duoc vi tri can xoa
+        int id = item.getItemId();
+
+        if (id == R.id.edit) {
+            editProduct(pos);
+            return true;
+        } else if (id == R.id.delete) {
+            deleteProduct(pos);
+            return true;
+        }
+        return super.onContextItemSelected(item);
+    }
+
     private void setListViewHeightBasedOnItems(ListView listView) {
         ListAdapter listAdapter = listView.getAdapter();
         if (listAdapter == null) return;
@@ -189,63 +208,6 @@ public class BuyActivity extends AppCompatActivity {
         listView.setLayoutParams(params);
         listView.requestLayout();
     }
-
-    /*private void addProduct() {
-        String productCode = etProductCode.getText().toString().trim();
-        String productName = etProductName.getText().toString().trim();
-        String priceText = etPrice.getText().toString().trim();
-        String quantityText = etQuantity.getText().toString().trim();
-
-        if (productCode.isEmpty() || productName.isEmpty() || priceText.isEmpty() || quantityText.isEmpty()) {
-            Toast.makeText(this, "Vui lòng nhập đầy đủ thông tin sản phẩm.", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        int quantityToAdd;
-        try {
-            quantityToAdd = Integer.parseInt(quantityText);
-        } catch (NumberFormatException e) {
-            Toast.makeText(this, "Số lượng không hợp lệ.", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        // Kiểm tra sản phẩm trong danh sách
-        boolean productExists = false;
-        for (int i = 0; i < productList.size(); i++) {
-            String productDetails = productList.get(i);
-
-            // Kiểm tra mã sản phẩm
-            if (productDetails.contains("Mã: " + productCode)) {
-                // Tăng số lượng
-                String[] parts = productDetails.split(", ");
-                int existingQuantity = Integer.parseInt(parts[3].split(": ")[1]);
-                int updatedQuantity = existingQuantity + quantityToAdd;
-
-                // Cập nhật chuỗi hiển thị
-                String updatedDetails = "Mã: " + productCode + ", Tên: " + productName + ", Giá: " + priceText + ", SL: " + updatedQuantity;
-                productList.set(i, updatedDetails);
-                adapter.notifyDataSetChanged();
-                productExists = true;
-                break;
-            }
-        }
-
-        // Nếu chưa tồn tại, thêm mới
-        if (!productExists) {
-            String productDetails = "Mã: " + productCode + ", Tên: " + productName + ", Giá: " + priceText + ", SL: " + quantityText;
-            productList.add(productDetails);
-            adapter.notifyDataSetChanged();
-        }
-
-        // Xóa dữ liệu trong các EditText
-        etProductCode.setText("");
-        etProductName.setText("");
-        etPrice.setText("");
-        etQuantity.setText("");
-
-        // Lưu vào Firebase
-        saveToFirebase(productCode, productName, priceText, quantityToAdd);
-    }*/
 
     private void addProduct() {
         String productCode = etProductCode.getText().toString().trim();
@@ -335,6 +297,42 @@ public class BuyActivity extends AppCompatActivity {
                     // Nếu người dùng hủy quét
                     Toast.makeText(BuyActivity.this, "Quét mã bị hủy.", Toast.LENGTH_LONG).show();
                 } else {
+                    String barcode = result.getContents(); // Lấy mã vạch
+                    // Tra cứu sản phẩm trong Firebase
+                    productsRepository.child(barcode).addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(@NonNull DataSnapshot snapshot) {
+                            if (snapshot.exists()) {
+                                // Lấy thông tin sản phẩm
+                                String ProductCode = snapshot.child("ProductCode").getValue(String.class);
+                                String ProductName = snapshot.child("Name").getValue(String.class);
+                                String Price = snapshot.child("Price").getValue(String.class);
+                                Integer Quantity = snapshot.child("Quantity").getValue(Integer.class);
+
+                                // Điền thông tin vào EditText
+                                etProductCode.setText(ProductCode != null ? ProductCode : "");
+                                etProductName.setText(ProductName != null ? ProductName : "");
+                                etPrice.setText(Price != null ? Price : "");
+                                etQuantity.setText("1"); // Mặc định số lượng là 1
+                            } else {
+                                Toast.makeText(BuyActivity.this, "Không tìm thấy sản phẩm với mã vạch này.", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+
+                        @Override
+                        public void onCancelled(@NonNull DatabaseError error) {
+                            Toast.makeText(BuyActivity.this, "Lỗi khi truy cập cơ sở dữ liệu!", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
+            });
+    //QR Code
+    /*private final ActivityResultLauncher<ScanOptions> barcodeLauncher = registerForActivityResult(new ScanContract(),
+            result -> {
+                if (result.getContents() == null) {
+                    // Nếu người dùng hủy quét
+                    Toast.makeText(BuyActivity.this, "Quét mã bị hủy.", Toast.LENGTH_LONG).show();
+                } else {
                     try {
                         // Parse JSON từ mã QR
                         JSONObject jsonObject = new JSONObject(result.getContents());
@@ -360,5 +358,39 @@ public class BuyActivity extends AppCompatActivity {
                         Toast.makeText(BuyActivity.this, "Dữ liệu QR không hợp lệ.", Toast.LENGTH_SHORT).show();
                     }
                 }
-            });
+            });*/
+
+    private void editProduct(int pos) {
+        if (pos >= 0 && pos < productList.size()) {
+            String productDetails = productList.get(pos);
+
+            // Tách thông tin sản phẩm từ chuỗi
+            String[] parts = productDetails.split(", ");
+            String productCode = parts[0].split(": ")[1];
+            String productName = parts[1].split(": ")[1];
+            String price = parts[2].split(": ")[1];
+            String quantity = parts[3].split(": ")[1];
+
+            // Điền thông tin vào các EditText
+            etProductCode.setText(productCode);
+            etProductName.setText(productName);
+            etPrice.setText(price);
+            etQuantity.setText(quantity);
+
+            // Xóa sản phẩm cũ khỏi danh sách
+            productList.remove(pos);
+            adapter.notifyDataSetChanged();
+
+            Toast.makeText(this, "Hãy sửa và nhấn Thêm để cập nhật sản phẩm.", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void deleteProduct(int pos) {
+        if (pos >= 0 && pos < productList.size()) {
+            productList.remove(pos);
+            adapter.notifyDataSetChanged();
+            Toast.makeText(this, "Đã xóa sản phẩm khỏi danh sách.", Toast.LENGTH_SHORT).show();
+        }
+    }
+
 }
