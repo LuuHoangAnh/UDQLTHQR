@@ -14,6 +14,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListAdapter;
 import android.widget.ListView;
+import android.widget.SearchView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -35,9 +36,12 @@ public class RepositoryActivity extends AppCompatActivity {
     DatabaseReference productsRepository = FirebaseDatabase.getInstance().getReferenceFromUrl("https://udqlthqr-default-rtdb.firebaseio.com/products");
     Button btnBack;
     ListView lvProducts;
+    SearchView searchView;
 
     List<String> productList = new ArrayList<>();
     List<String> productKeys = new ArrayList<>();
+    List<String> originalList = new ArrayList<>();
+    List<String> originalKeys = new ArrayList<>();
     ArrayAdapter<String> adapter;
 
     @Override
@@ -47,6 +51,7 @@ public class RepositoryActivity extends AppCompatActivity {
 
         btnBack = findViewById(R.id.btnBack);
         lvProducts = findViewById(R.id.lvProducts);
+        searchView = findViewById(R.id.searchView);
 
         productList = new ArrayList<>();
         adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, productList);
@@ -56,6 +61,44 @@ public class RepositoryActivity extends AppCompatActivity {
         loadProductsFromFirebase();
 
         registerForContextMenu(lvProducts);
+
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                return false;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                if (newText.isEmpty()) {
+                    // Nếu ô tìm kiếm trống, khôi phục danh sách gốc
+                    productList.clear();
+                    productList.addAll(originalList);
+
+                    productKeys.clear();
+                    productKeys.addAll(originalKeys); // Đồng bộ keys gốc
+                } else {
+                    // Lọc danh sách dựa trên input
+                    List<String> filteredList = new ArrayList<>();
+                    List<String> filteredKeys = new ArrayList<>();
+                    for (int i = 0; i < originalList.size(); i++) {
+                        if (originalList.get(i).toLowerCase().contains(newText.toLowerCase())) {
+                            filteredList.add(originalList.get(i));
+                            filteredKeys.add(originalKeys.get(i)); // Lọc keys tương ứng
+                        }
+                    }
+
+                    productList.clear();
+                    productList.addAll(filteredList);
+
+                    productKeys.clear();
+                    productKeys.addAll(filteredKeys); // Cập nhật keys tương ứng
+                }
+
+                adapter.notifyDataSetChanged();
+                return false;
+            }
+        });
 
         btnBack.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -75,27 +118,25 @@ public class RepositoryActivity extends AppCompatActivity {
     @Override
     public boolean onContextItemSelected(@NonNull MenuItem item) {
         AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo) item.getMenuInfo();
-        int pos = info.position; //lay duoc vi tri can xoa
-        int id = item.getItemId();
+        int pos = info.position; // Vị trí trong danh sách hiển thị (filtered list)
 
-        if (id == R.id.edit) {
-            editProduct(pos); // Gọi phương thức edit
-            return true;
-        } else if (id == R.id.delete) {
-            String key = productKeys.get(pos); // Lấy key từ danh sách productKeys
+        if (item.getItemId() == R.id.delete) {
+            String key = productKeys.get(pos); // Lấy key chính xác từ danh sách hiển thị
             productsRepository.child(key).removeValue((error, ref) -> {
                 if (error == null) {
                     Toast.makeText(RepositoryActivity.this, "Deleted successfully", Toast.LENGTH_SHORT).show();
-                    productList.remove(pos);
-                    productKeys.remove(pos); // Xóa key khỏi danh sách
+                    productList.remove(pos); // Xóa phần tử trong danh sách hiển thị
+                    productKeys.remove(pos); // Xóa key tương ứng
                     adapter.notifyDataSetChanged();
                 } else {
                     Toast.makeText(RepositoryActivity.this, "Delete failed: " + error.getMessage(), Toast.LENGTH_SHORT).show();
                 }
             });
             return true;
+        } else if (item.getItemId() == R.id.edit) {
+            editProduct(pos); // Truyền vị trí đã lọc
+            return true;
         }
-
         return super.onContextItemSelected(item);
     }
 
@@ -105,9 +146,13 @@ public class RepositoryActivity extends AppCompatActivity {
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 productList.clear();  // Xóa danh sách hiện tại
                 productKeys.clear();
+                originalList.clear();
+                originalKeys.clear(); // Đồng bộ key gốc
+
                 for (DataSnapshot productSnapshot : snapshot.getChildren()) {
                     String key = productSnapshot.getKey(); // Lấy key thực tế từ Firebase
                     productKeys.add(key); // Lưu key vào danh sách
+                    originalKeys.add(key); // Lưu key gốc
 
                     String productCode = productSnapshot.child("ProductCode").getValue(String.class);
                     String name = productSnapshot.child("Name").getValue(String.class);
@@ -118,6 +163,7 @@ public class RepositoryActivity extends AppCompatActivity {
                         // Định dạng chuỗi hiển thị sản phẩm
                         String productString = "Mã: " + productCode + ", Tên: " + name + ", Giá: " + price + ", SL: " + quantity;
                         productList.add(productString);
+                        originalList.add(productString); // Lưu bản sao
                     }
                 }
 

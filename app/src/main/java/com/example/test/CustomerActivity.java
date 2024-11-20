@@ -15,6 +15,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListAdapter;
 import android.widget.ListView;
+import android.widget.SearchView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -35,9 +36,12 @@ public class CustomerActivity extends AppCompatActivity {
     DatabaseReference customerRepository = FirebaseDatabase.getInstance().getReferenceFromUrl("https://udqlthqr-default-rtdb.firebaseio.com/customer");
     Button btnBack;
     ListView lvCustomer;
+    SearchView searchView;
 
     List<String> customerList = new ArrayList<>();
     List<String> customerKeys = new ArrayList<>();
+    List<String> originalList = new ArrayList<>();
+    List<String> originalKeys = new ArrayList<>();
     ArrayAdapter<String> adapter;
 
     @Override
@@ -48,6 +52,7 @@ public class CustomerActivity extends AppCompatActivity {
         // Bind UI components
         btnBack = findViewById(R.id.btnBack);
         lvCustomer = findViewById(R.id.lvCustomer);
+        searchView = findViewById(R.id.searchView);
 
         // Initialize adapter and set it to the ListView
         adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, customerList);
@@ -57,6 +62,44 @@ public class CustomerActivity extends AppCompatActivity {
         loadCustomersFromFirebase();
 
         registerForContextMenu(lvCustomer);
+
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                return false;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                if (newText.isEmpty()) {
+                    // Nếu ô tìm kiếm trống, khôi phục danh sách gốc
+                    customerList.clear();
+                    customerList.addAll(originalList);
+
+                    customerKeys.clear();
+                    customerKeys.addAll(originalKeys); // Đồng bộ keys gốc
+                } else {
+                    // Lọc danh sách dựa trên input
+                    List<String> filteredList = new ArrayList<>();
+                    List<String> filteredKeys = new ArrayList<>();
+                    for (int i = 0; i < originalList.size(); i++) {
+                        if (originalList.get(i).toLowerCase().contains(newText.toLowerCase())) {
+                            filteredList.add(originalList.get(i));
+                            filteredKeys.add(originalKeys.get(i)); // Lọc keys tương ứng
+                        }
+                    }
+
+                    customerList.clear();
+                    customerList.addAll(filteredList);
+
+                    customerKeys.clear();
+                    customerKeys.addAll(filteredKeys); // Cập nhật keys tương ứng
+                }
+
+                adapter.notifyDataSetChanged();
+                return false;
+            }
+        });
 
         // Set back button listener
         btnBack.setOnClickListener(new View.OnClickListener() {
@@ -77,23 +120,23 @@ public class CustomerActivity extends AppCompatActivity {
     @Override
     public boolean onContextItemSelected(@NonNull MenuItem item) {
         AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo) item.getMenuInfo();
-        int pos = info.position; //lay duoc vi tri can xoa
-        int id = item.getItemId();
-        if (id == R.id.delete) {
-            // Lấy key từ danh sách customerKeys
-            String key = customerKeys.get(pos);
+        int pos = info.position; // Vị trí trong danh sách hiển thị (filtered list)
 
-            // Xóa dữ liệu trong Firebase
+        if (item.getItemId() == R.id.delete) {
+            String key = customerKeys.get(pos); // Lấy key chính xác từ danh sách hiển thị
             customerRepository.child(key).removeValue((error, ref) -> {
                 if (error == null) {
                     Toast.makeText(CustomerActivity.this, "Deleted successfully", Toast.LENGTH_SHORT).show();
+                    customerList.remove(pos); // Xóa phần tử trong danh sách hiển thị
+                    customerKeys.remove(pos); // Xóa key tương ứng
+                    adapter.notifyDataSetChanged();
                 } else {
                     Toast.makeText(CustomerActivity.this, "Delete failed: " + error.getMessage(), Toast.LENGTH_SHORT).show();
                 }
             });
             return true;
-        } else if (id == R.id.edit) {
-            edit(pos);
+        } else if (item.getItemId() == R.id.edit) {
+            edit(pos); // Truyền vị trí đã lọc
             return true;
         }
         return super.onContextItemSelected(item);
@@ -104,6 +147,10 @@ public class CustomerActivity extends AppCompatActivity {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 customerList.clear();  // Clear the current list
+                customerKeys.clear();
+                originalList.clear();
+                originalKeys.clear(); // Đồng bộ key gốc
+
                 for (DataSnapshot customerSnapshot : snapshot.getChildren()) {
                     String key = customerSnapshot.getKey(); // Lấy key từ Firebase
                     String fullname = customerSnapshot.child("fullname").getValue(String.class);
@@ -112,11 +159,14 @@ public class CustomerActivity extends AppCompatActivity {
                     if (fullname != null && phone != null) {
                         Customer customer = new Customer(fullname, phone);
                         customerKeys.add(key); // Lưu key vào danh sách
+                        originalKeys.add(key); // Lưu key gốc
                         customerList.add(customer.toString());
+                        originalList.add(customer.toString()); // Lưu bản sao
                     } else {
                         Log.w("FirebaseCustomer", "Incomplete customer data: " + customerSnapshot.getValue());
                     }
                 }
+
                 adapter.notifyDataSetChanged();  // Update the ListView
                 setListViewHeightBasedOnItems(lvCustomer);  // Adjust ListView height
             }
